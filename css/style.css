@@ -7,7 +7,6 @@ body {
     align-items: flex-start;
     height: 100vh;
     margin: 0;
-    padding-top: 60px;
     color: #ffffff;
     box-sizing: border-box;
     background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1484715444575-8f126523872f?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
@@ -17,9 +16,29 @@ body {
 }
 
 #gameContainer {
+    position: relative;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+#gameContent {
     display: flex;
-    background: transparent;
-    border-radius: 0;
+    justify-content: center;
+    align-items: flex-start;
+    transition: transform 1s ease-in;
+    padding-top: 60px;
+}
+
+#leftContainer, #rightContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+#boardContainer {
+    margin: 0 0px;
 }
 
 #holdContainer, #nextContainer {
@@ -147,4 +166,94 @@ span {
 
 .shake-right {
     animation: screenShakeRight 0.10s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes fallOut {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(100%); }
+}
+
+@keyframes fallIn {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes flyOut {
+    0.0000% { transform: translate(0.0px, 0.0px) rotate(0deg); }
+    3.7445% { transform: translate(46.9px, -53.1px) rotate(2deg); }
+    7.2563% { transform: translate(94.0px, -100.1px) rotate(4deg); }
+    10.5567% { transform: translate(141.2px, -141.0px) rotate(6deg); }
+    13.6684% { transform: translate(188.4px, -176.2px) rotate(8deg); }
+    16.6157% { transform: translate(235.8px, -205.7px) rotate(10deg); }
+    19.4243% { transform: translate(283.2px, -229.7px) rotate(12deg); }
+    22.1209% { transform: translate(330.7px, -248.4px) rotate(13deg); }
+    24.7327% { transform: translate(378.2px, -262.0px) rotate(15deg); }
+    27.2866% { transform: translate(425.8px, -270.7px) rotate(16deg); }
+    29.8087% { transform: translate(473.4px, -274.6px) rotate(18deg); }
+    32.3232% { transform: translate(521.0px, -273.8px) rotate(19deg); }
+    34.8519% { transform: translate(568.6px, -268.7px) rotate(21deg); }
+    37.4139% { transform: translate(616.1px, -259.3px) rotate(22deg); }
+    40.0250% { transform: translate(663.7px, -245.7px) rotate(24deg); }
+    42.6980% { transform: translate(711.2px, -228.3px) rotate(26deg); }
+    45.4428% { transform: translate(758.6px, -207.1px) rotate(27deg); }
+    48.2665% { transform: translate(806.0px, -182.4px) rotate(29deg); }
+    51.1742% { transform: translate(853.3px, -154.2px) rotate(31deg); }
+    54.1684% { transform: translate(900.5px, -122.9px) rotate(32deg); }
+    57.2504% { transform: translate(947.6px, -88.4px) rotate(34deg); }
+    60.4197% { transform: translate(994.6px, -51.1px) rotate(36deg); }
+    63.6746% { transform: translate(1041.4px, -11.1px) rotate(38deg); }
+    70.4290% { transform: translate(1134.7px, 76.4px) rotate(42deg); }
+    77.4833% { transform: translate(1227.3px, 172.6px) rotate(46deg); }
+    84.7962% { transform: translate(1319.1px, 276.2px) rotate(51deg); }
+    92.3195% { transform: translate(1410.0px, 385.8px) rotate(55deg); }
+    100.0000% { transform: translate(1500.0px, 500.0px) rotate(60deg); }
+  }
+
+.fall-out {
+    animation: flyOut 1s cubic-bezier(.47,1,.78,.38) forwards;
+    transform-origin: center center
+}
+
+.fall-in {
+    animation: fallIn 0.5s cubic-bezier(.44,1.08,.86,1.07) forwards;
+}
+
+#gameOverScreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-family: Arial, sans-serif;
+    z-index: 1000;
+}
+
+#gameOverScreen h2 {
+    font-size: 40px;
+    margin-bottom: 20px;
+}
+
+#gameOverScreen p {
+    font-size: 20px;
+    margin: 10px 0;
+}
+
+#retryButton {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
 }

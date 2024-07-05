@@ -149,6 +149,9 @@ let backToBackCount = 0;
 let isIntervalActive = false;
 let intervalTimer = 0;
 let isGameStarted = false;
+let isGameInitialized = false;
+let isResetting = false;
+let isAnimating = false;
 
 // ゲーム状態
 let gameState = {
@@ -198,7 +201,7 @@ function moveDown() {
  * @param {string} type - 揺れのタイプ ('hard', 'soft', 'left', 'right')
  */
 function shakeScreen(type) {
-    const gameContainer = document.getElementById('gameContainer');
+    const gameContainer = document.getElementById('gameContent');
     let className;
     
     switch(type) {
@@ -248,6 +251,7 @@ function lockPiece(isHardDrop = false) {
 
     if (currentPiece.y <= 1) {  // 21段目にミノが設置された直後
         gameOver();
+        return;
     } else {
         removeLines(tSpin, tSpinMini);
         isIntervalActive = true;
@@ -661,15 +665,6 @@ function resetPiece() {
 }
 
 /**
- * ゲームオーバー処理
- */
-function gameOver() {
-    isGameOver = true;
-    alert('Game Over! Your score: ' + score);
-    initGame();
-}
-
-/**
  * レベルの更新
  */
     function updateLevel() {
@@ -696,22 +691,33 @@ function changeLevel(level){
 function initGame() {
     // ゲーム状態の初期化
     isGameOver = false;
-    isGameStarted = false;
     score = 0;
-    level = 1;
+    level = 0;
     totalLinesCleared = 0;
-
-    // REN関連の初期化
     currentRen = 0;
     internalRenCount = 0;
-
-    // Back-to-Back関連の初期化
     backToBack = false;
     backToBackCount = 0;
+    nextPieces = [];
 
     // ボードの初期化
     board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
 
+    // UI更新
+    updateScoreDisplay();
+
+    // ゲーム初期化フラグを設定
+    isGameInitialized = true;
+    isGameStarted = false;
+
+    // 盤面の初期描画
+    draw();
+}
+
+/**
+ * ゲームスタート
+ */
+function startGame() {
     // ピース関連の初期化
     bag = [];
     currentPiece = getNextPiece();
@@ -720,19 +726,73 @@ function initGame() {
     canHold = true;
 
     // ゲームスピードの初期化
+    level = 1;
     gameState.dropInterval = LEVEL_SPEEDS[0];
 
-    // UI更新
-    scoreElement.textContent = score;
-    document.getElementById('level').textContent = level;
-    updateScoreDisplay();
+    isGameStarted = true;
+    
+    // ゲームループの開始
+    update();
 }
+
+/**
+ * ゲームオーバー処理を行う
+ * ゲームオーバー画面を表示し、最終スコアを更新する
+ */
+function gameOver() {
+    if (isGameOver || isAnimating) return;
+    isGameOver = true;
+    isAnimating = true;
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const gameContent = document.getElementById('gameContent');
+    
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalLevel').textContent = level;
+    document.getElementById('finalLines').textContent = totalLinesCleared;
+    
+    
+    setTimeout(() => {
+        gameOverScreen.classList.remove('hidden');
+        gameContent.classList.add('fall-out');
+    
+        setTimeout(() => {
+            isAnimating = false;
+        }, 1000);
+    }, 300);
+}
+
+/**
+ * ゲームをリセットする
+ * ゲームオーバー画面を非表示にし、ゲームを初期化する
+ */
+function resetGame() {
+    if (isAnimating) return;
+    isAnimating = true;
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const gameContent = document.getElementById('gameContent');
+    gameOverScreen.classList.add('hidden');
+    initGame();
+
+    gameContent.classList.remove('fall-out');
+    gameContent.classList.add('fall-in');
+
+    setTimeout(() => {
+        gameContent.classList.remove('fall-in');
+        isGameOver = false;
+        isAnimating = false;
+    }, 500);
+}
+
 
 /**
  * ゲームの更新を行う
  * @param {number} time - 現在の時間
  */
 function update(time = 0) {
+    if (!isGameStarted) {
+        requestAnimationFrame(update);
+        return;
+    }
     const deltaTime = time - gameState.lastTime;
     gameState.lastTime = time;
 

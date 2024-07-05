@@ -11,23 +11,35 @@ let hardDropEffectLifeTime = HARD_DROP_EFFECT_LIFETIME;
  * ゲーム全体の描画を行う
  */
 function draw() {
-    if(isSrsAnimationRunning) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'black';
     ctx.fillRect(3, BLOCK_SIZE * 3, COLS * BLOCK_SIZE, VISIBLE_ROWS * BLOCK_SIZE);
     drawGrid();
     drawBoard();
-    drawGhostPiece();
-    drawPiece(ctx, currentPiece, currentPiece.x, currentPiece.y + 1);
     drawFrame();
-    drawHoldPiece();
-    drawNextPieces();
 
-    // ハードドロップエフェクトの描画
-    if (hardDropEffect) {
-        hardDropEffect();
+    if (isGameStarted) {
+        if(!isGameOver) drawGhostPiece();
+        drawPiece(ctx, currentPiece, currentPiece.x, currentPiece.y + 1);
+        drawHoldPiece();
+        drawNextPieces();
+
+        // ハードドロップエフェクトの描画
+        if (hardDropEffect) {
+            hardDropEffect();
+        }
+    } else {
+        // ゲーム開始前の表示
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Press any key to start', canvas.width / 2, canvas.height / 2);
+        drawHoldPiece();
+        drawNextPieces();
+        updateScoreDisplay();
     }
 }
+
 
 /**
  * ゲームボードの枠を描画する

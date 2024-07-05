@@ -19,7 +19,22 @@ let inputState = {
     reload: false,
 };
 
+let lastResetTime = 0;
+const resetCooldown = 1000;
+
 document.addEventListener('keydown', event => {
+    if (isAnimating) return;
+
+        if (isGameOver) {
+            if (event.code === 'KeyR' || event.code === 'Space' || event.code === 'Escape') {
+                resetGame();
+            }
+            return;
+    }
+    if (isGameInitialized && !isGameStarted) {
+        startGame();
+        return;
+    }
     if (!isTestMode) {
         switch (event.keyCode) {
             case 37: // 左矢印
@@ -103,3 +118,17 @@ document.addEventListener('keyup', event => {
             break;
     }
 });
+
+/**
+ * リトライボタンのクリックイベントを設定する
+ */
+function setupRetryButton() {
+    const retryButton = document.getElementById('retryButton');
+    retryButton.addEventListener('click', () => {
+        if (isAnimating) return;
+        resetGame();
+    });
+}
+
+// 既存のイベントリスナー設定の中に以下を追加
+setupRetryButton();
