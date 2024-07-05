@@ -1,0 +1,17 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+#gameContainer {
+    display: flex;
+}
+#gameBoard {
+    margin: 0 20px;
+}
+#holdContainer, #nextContainer {
+    width: 120px;
+}
