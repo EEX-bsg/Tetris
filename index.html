@@ -76,9 +76,18 @@
             '#00ffff', '#ffff00', '#800080', '#ffa500', '#0000ff', '#00ff00', '#ff0000'
         ];
 
-        // レベルごとの落下速度
+        // レベルごとの落下速度 ms
         const LEVEL_SPEEDS = [
-            800, 717, 633, 550, 467, 383, 300, 217, 133, 100, 83, 83, 83, 67, 67, 67, 50, 50, 50, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 17
+            800, 650, 500, 370, 250, 150, 100, 80, 60, 40,  // レベル1-10
+            33.33, 26.67, 20, 16.67, 13.33, 10, 8, 6, 4, 3, // レベル11-20
+            3, 3, 3, 3, 3, 3, 3, 3, 2, 1        // レベル21-30
+        ];
+
+        // レベルごとのインターバル時間を設定（ミリ秒単位）
+        const LEVEL_INTERVALS = [
+            500, 500, 500, 400, 400, 300, 300, 200, 200, 100, // レベル1-10
+            90, 80, 70, 60, 50, 40, 30, 20, 10, 10,    // レベル11-20
+            10, 10, 10, 10, 10, 10, 10, 10, 10, 1            // レベル21-30
         ];
 
         // SRS（スーパーローテーションシステム）の設定
@@ -153,6 +162,8 @@
         let lastClearWasTeris = false;
         let backToBack = false;
         let backToBackCount = 0;
+        let isIntervalActive = false;
+        let intervalTimer = 0;
 
         // 入力状態
         let inputState = {
@@ -389,9 +400,19 @@
                 gameOver();
             } else {
                 removeLines(tSpin, tSpinMini);
+                isIntervalActive = true;
+                intervalTimer = calculateIntervalTime();
                 resetPiece();
             }
         }
+
+        /**
+         * テトリミノが落下し始めるまでの時間の計算
+         */
+        function calculateIntervalTime() {
+            return LEVEL_INTERVALS[Math.min(level - 1, LEVEL_INTERVALS.length - 1)];
+        }
+
 
         /**
          * 衝突判定
@@ -833,13 +854,20 @@
         /**
          * レベルの更新
          */
-        function updateLevel() {
-            const newLevel = Math.min(Math.floor(totalLinesCleared / 10) + 1, LEVEL_SPEEDS.length);
-            if (newLevel !== level) {
-                level = newLevel;
-                document.getElementById('level').textContent = level;
-                gameState.dropInterval = LEVEL_SPEEDS[level - 1];
+         function updateLevel() {
+            const newLevel = Math.floor(totalLinesCleared / 10) + 1;
+            if (newLevel > level) {
+                changeLevel(newLevel);
             }
+        }
+
+        /**
+         * レベルの変更
+         * @param {number} level - 現在の時間
+         */
+        function changeLevel(level){
+            document.getElementById('level').textContent = level;
+            gameState.dropInterval = LEVEL_SPEEDS[Math.min(level, LEVEL_SPEEDS.length)-1];
         }
 
         //メインループと初期化
@@ -888,11 +916,29 @@
         function update(time = 0) {
             const deltaTime = time - gameState.lastTime;
             gameState.lastTime = time;
-            
-            gameState.dropCounter += deltaTime;
-            if (gameState.dropCounter > gameState.dropInterval) {
-                if(!isTestMode) moveDown();
-                gameState.dropCounter = 0;
+
+            if(isIntervalActive){
+                intervalTimer -= deltaTime;
+                if(intervalTimer <= 0){
+                    isIntervalActive = false;
+                }
+            }
+            else{
+                gameState.dropCounter += deltaTime;
+                if (gameState.dropCounter > gameState.dropInterval) {
+                    if(!isTestMode){
+                        if (gameState.dropInterval <= 2) {
+                            // 超高速落下: ブロックを一気に落下させる
+                            while (!collision(currentPiece)) {
+                                currentPiece.y++;
+                            }
+                            currentPiece.y--;
+                        } else {
+                            moveDown();
+                        }
+                    }
+                    gameState.dropCounter = 0;
+                }
             }
 
             if(!isTestMode) {
