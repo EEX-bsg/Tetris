@@ -1,7 +1,7 @@
 "use strict";
 
 //エフェクト
-const HARD_DROP_EFFECT_LIFETIME = 5;
+const HARD_DROP_EFFECT_LIFETIME = 3;
 
 let hardDropEffect = null;
 let hardDropEffectLifeTime = HARD_DROP_EFFECT_LIFETIME;
@@ -11,16 +11,19 @@ let hardDropEffectLifeTime = HARD_DROP_EFFECT_LIFETIME;
  * ゲーム全体の描画を行う
  */
 function draw() {
+    const currentColor = getCurrentColor();
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'black';
     ctx.fillRect(3, BLOCK_SIZE * 3, COLS * BLOCK_SIZE, VISIBLE_ROWS * BLOCK_SIZE);
     drawGrid();
     drawBoard();
-    drawFrame();
+    drawFrame(currentColor);
 
     if (isGameStarted) {
         if(!isGameOver) drawGhostPiece();
         drawPiece(ctx, currentPiece, currentPiece.x, currentPiece.y + 1);
+        if(!isGameOver) drawGhostPieceCrosses();
         drawHoldPiece();
         drawNextPieces();
 
@@ -38,14 +41,24 @@ function draw() {
         drawNextPieces();
         updateScoreDisplay();
     }
+
+    // CSSで制御される要素の色を更新
+    document.getElementById('holdContainer').style.borderColor = currentColor;
+    document.getElementById('nextContainer').style.borderColor = currentColor;
+    const headers = document.querySelectorAll('.header');
+    headers.forEach(header => {
+        header.style.backgroundColor = currentColor;
+        header.style.color = colorTransitionProgress > 0.5 ? 'white' : 'black';
+    });
 }
 
 
 /**
  * ゲームボードの枠を描画する
+ * @param {string} color - 枠線の色
  */
-function drawFrame() {
-    ctx.strokeStyle = 'white';
+function drawFrame(color) {
+    ctx.strokeStyle = color;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(1.5, BLOCK_SIZE * 3);
@@ -80,13 +93,11 @@ function drawGrid() {
  */
 function drawBoard() {
     board.forEach((row, y) => {
-        if (y >= ROWS - VISIBLE_ROWS) {
-            row.forEach((value, x) => {
-                if (value > 0) {
-                    drawBlock(ctx, x, y - (ROWS - VISIBLE_ROWS) + 3, COLORS[value - 1]);
-                }
-            });
-        }
+        row.forEach((value, x) => {
+            if (value > 0) {
+                drawBlock(ctx, x, y - (ROWS - VISIBLE_ROWS) + 3, COLORS[value - 1]);
+            }
+        });
     });
 }
 
@@ -163,7 +174,7 @@ function drawPiece(context, piece, offsetX, offsetY, size = 1.0) {
 }
 
 /**
- * ゴーストピースを描画する
+ * ゴーストピースを描画する。
  */
 function drawGhostPiece() {
     const ghostPiece = {...currentPiece};
@@ -172,15 +183,56 @@ function drawGhostPiece() {
     }
     ghostPiece.y--;
 
-    ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
     ghostPiece.shape[0].forEach((row, y) => {
         row.forEach((value, x) => {
             if (value > 0) {
+                const boardRow = ghostPiece.y + y;
+                const boardCol = ghostPiece.x + x;
                 const drawX = (ghostPiece.x + x) * BLOCK_SIZE + 3;
                 const drawY = (ghostPiece.y + y + 1) * BLOCK_SIZE;
+
+                const isInDanger = isInDangerZone(boardRow, boardCol);
+
+                ctx.fillStyle = isInDanger ? 'rgba(255, 0, 0, 0.3)' : 'rgba(128, 128, 128, 0.5)';
                 ctx.fillRect(drawX, drawY, BLOCK_SIZE, BLOCK_SIZE);
-                ctx.strokeStyle = 'gray';
+                ctx.strokeStyle = isInDanger ? 'rgba(255, 0, 0, 0.5)' : 'rgba(128, 128, 128, 0.5)';
                 ctx.strokeRect(drawX, drawY, BLOCK_SIZE, BLOCK_SIZE);
+            }
+        });
+    });
+}
+
+/**
+ * ゴーストピースがdangerzoneの時バツマークを描く
+ */
+function drawGhostPieceCrosses() {
+    const ghostPiece = {...currentPiece};
+    while (!collision(ghostPiece)) {
+        ghostPiece.y++;
+    }
+    ghostPiece.y--;
+
+    ghostPiece.shape[0].forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value > 0) {
+                const boardRow = ghostPiece.y + y;
+                const boardCol = ghostPiece.x + x;
+                if (isInDangerZone(boardRow, boardCol)) {
+                    const drawX = (ghostPiece.x + x) * BLOCK_SIZE + 3;
+                    const drawY = (ghostPiece.y + y + 1) * BLOCK_SIZE;
+
+                    // バツ印を描画
+                    ctx.beginPath();
+                    ctx.moveTo(drawX, drawY);
+                    ctx.lineTo(drawX + BLOCK_SIZE, drawY + BLOCK_SIZE);
+                    ctx.moveTo(drawX + BLOCK_SIZE, drawY);
+                    ctx.lineTo(drawX, drawY + BLOCK_SIZE);
+                    ctx.strokeStyle = '#660000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx.fillRect(drawX, drawY, BLOCK_SIZE, BLOCK_SIZE);
+                }
             }
         });
     });
@@ -279,7 +331,7 @@ function drawHardDropTrail(piece, startY, endY) {
         });
     });
 
-    for (let y = startY+1; y <= endY; y++) {
+    for (let y = startY+1; y <= endY+1; y++) {
         opacity += 0.02;
         rowArray.forEach((value, pieceX) => {
             if (value !== 0) {

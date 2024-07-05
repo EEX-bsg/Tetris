@@ -5,6 +5,7 @@ const ROWS = 22;
 const VISIBLE_ROWS = 20;
 const BLOCK_SIZE = 30;
 const MAX_MOVES = 15;
+const FPS = 60;
 
 // キャンバス要素
 const canvas = document.getElementById('gameBoard');
@@ -43,7 +44,7 @@ ARR: 25      // Auto Repeat Rate（連続移動の間隔）
 // レベルごとの落下速度 ms
 const LEVEL_SPEEDS = [
 800, 650, 500, 370, 250, 150, 100, 80, 60, 40,  // レベル1-10
-33.33, 26.67, 20, 16.67, 13.33, 10, 8, 6, 4, 3, // レベル11-20
+33.33, 26.67, 20, 17, 17, 10, 8, 6, 4, 3, // レベル11-20
 3, 3, 3, 3, 3, 3, 3, 3, 2, 1        // レベル21-30
 ];
 
@@ -152,12 +153,18 @@ let isGameStarted = false;
 let isGameInitialized = false;
 let isResetting = false;
 let isAnimating = false;
+let currentDangerState = false;
+let colorTransitionProgress = 0;
+let currentBackgroundOpacity = 0.6;  // 初期の透過度
+let targetBackgroundOpacity = 0.6;   // 目標の透過度
+const OPACITY_CHANGE_RATE = 0.002;   // 1ミリ秒あたりの透過度変化量
 
 // ゲーム状態
 let gameState = {
 dropCounter: 0,
 dropInterval: 1000,
-lastTime: 0
+lastTime: 0,
+elapsedTime: 0,
 };
 
 // ロック遅延関連
@@ -197,39 +204,6 @@ function moveDown() {
 }
 
 /**
- * 画面を揺らすアニメーションを適用する
- * @param {string} type - 揺れのタイプ ('hard', 'soft', 'left', 'right')
- */
-function shakeScreen(type) {
-    const gameContainer = document.getElementById('gameContent');
-    let className;
-    
-    switch(type) {
-        case 'hard':
-            className = 'shake-hard';
-            break;
-        case 'soft':
-            className = 'shake-soft';
-            break;
-        case 'left':
-            className = 'shake-left';
-            break;
-        case 'right':
-            className = 'shake-right';
-            break;
-        default:
-            return;
-    }
-    
-    gameContainer.classList.add(className);
-    
-    // アニメーション終了後にクラスを削除
-    setTimeout(() => {
-        gameContainer.classList.remove(className);
-    }, 150);  // アニメーションの持続時間と同じ
-}
-
-/**
  * テトリミノをロック（固定）する
  * @param {boolean} isHardDrop - ハードドロップかどうか trueでハードドロップ
  */
@@ -245,22 +219,21 @@ function lockPiece(isHardDrop = false) {
             }
         });
     });
+    if (checkGameOver()) {
+        gameOver();
+        return;
+    }
 
     const tSpin = isTSpin(currentPiece, board);
     const tSpinMini = isTSpinMini(currentPiece, board, currentPiece.lastKick);
 
-    if (currentPiece.y <= 1) {  // 21段目にミノが設置された直後
-        gameOver();
-        return;
-    } else {
-        removeLines(tSpin, tSpinMini);
-        isIntervalActive = true;
-        intervalTimer = calculateIntervalTime();
-        resetPiece();
-        
-        // 画面を揺らす
-        shakeScreen(isHardDrop ? 'hard' : 'soft');
-    }
+    removeLines(tSpin, tSpinMini);
+    isIntervalActive = true;
+    intervalTimer = calculateIntervalTime();
+    resetPiece();
+
+    // 画面を揺らす
+    shakeScreen(isHardDrop ? 'hard' : 'soft');
 }
 
 /**
@@ -665,6 +638,38 @@ function resetPiece() {
 }
 
 /**
+ * ボードの状態をチェックし、18段目以上にブロックがあるかどうかを返す
+ * @returns {boolean} 18段目以上にブロックがある場合はtrue、そうでない場合はfalse
+ */
+function checkDangerZone() {
+    const dangerRow = ROWS - 18; // 18段目のインデックス（上から数えて）
+    for (let x = 0; x < COLS; x++) {
+        if (board[dangerRow][x] !== 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * 指定された位置がデンジャーゾーンにあるかどうかを判定する
+ * @param {number} row - ボード上の行
+ * @param {number} col - ボード上の列
+ * @returns {boolean} デンジャーゾーンにある場合はtrue、そうでない場合はfalse
+ */
+function isInDangerZone(row, col) {
+    const spawnArea = {
+        startRow: 0,
+        endRow: 1,
+        startCol: 3,
+        endCol: 6
+    };
+
+    return row >= spawnArea.startRow && row <= spawnArea.endRow &&
+           col >= spawnArea.startCol && col <= spawnArea.endCol;
+}
+
+/**
  * レベルの更新
  */
     function updateLevel() {
@@ -678,9 +683,152 @@ function resetPiece() {
  * レベルの変更
  * @param {number} level - 現在の時間
  */
-function changeLevel(level){
-    document.getElementById('level').textContent = level;
-    gameState.dropInterval = LEVEL_SPEEDS[Math.min(level, LEVEL_SPEEDS.length)-1];
+function changeLevel(num){
+    level=num;
+    document.getElementById('level').textContent = num;
+    gameState.dropInterval = LEVEL_SPEEDS[Math.min(num, LEVEL_SPEEDS.length)-1];
+}
+
+/**
+ * ゲームオーバー判定を行う
+ * @returns {boolean} ゲームオーバーの場合はtrue、そうでない場合はfalse
+ */
+function checkGameOver() {
+    const spawnArea = {
+        startRow: 0,
+        endRow: 1,
+        startCol: 3,
+        endCol: 6
+    };
+
+    for (let row = spawnArea.startRow; row <= spawnArea.endRow; row++) {
+        for (let col = spawnArea.startCol; col <= spawnArea.endCol; col++) {
+            if (board[row][col] !== 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * ゴーストの位置がゲームオーバー判定に被っているかチェックする
+ * @param {Object} ghostPiece - ゴーストピースのオブジェクト
+ * @returns {boolean} 被っている場合はtrue、そうでない場合はfalse
+ */
+function ghostPieceOverlapsDangerZone() {
+    const ghostPiece = {...currentPiece};
+    while (!collision(ghostPiece)) {
+        ghostPiece.y++;
+    }
+    ghostPiece.y--;
+
+    return ghostPiece.shape[0].some((row, y) => 
+        row.some((value, x) => 
+            value > 0 && isInDangerZone(ghostPiece.y + y, ghostPiece.x + x)
+        )
+    );
+}
+
+//アニメーション
+
+/**
+ * 画面を揺らすアニメーションを適用する
+ * @param {string} type - 揺れのタイプ ('hard', 'soft', 'left', 'right')
+ */
+function shakeScreen(type) {
+    const gameContainer = document.getElementById('gameContent');
+    let className;
+    
+    switch(type) {
+        case 'hard':
+            className = 'shake-hard';
+            break;
+        case 'soft':
+            className = 'shake-soft';
+            break;
+        case 'left':
+            className = 'shake-left';
+            break;
+        case 'right':
+            className = 'shake-right';
+            break;
+        default:
+            return;
+    }
+    
+    gameContainer.classList.add(className);
+    
+    // アニメーション終了後にクラスを削除
+    setTimeout(() => {
+        gameContainer.classList.remove(className);
+    }, 150);  // アニメーションの持続時間と同じ
+}
+
+/**
+ * 色を徐々に変化させる
+ * @param {string} startColor 開始色
+ * @param {string} endColor 終了色
+ * @param {number} progress 進行度（0から1）
+ * @returns {string} 中間の色
+ */
+function interpolateColor(startColor, endColor, progress) {
+    const start = parseInt(startColor.slice(1), 16);
+    const end = parseInt(endColor.slice(1), 16);
+    const r = Math.round(((end >> 16) & 255) * progress + ((start >> 16) & 255) * (1 - progress));
+    const g = Math.round(((end >> 8) & 255) * progress + ((start >> 8) & 255) * (1 - progress));
+    const b = Math.round((end & 255) * progress + (start & 255) * (1 - progress));
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/**
+ * 色遷移のアニメーションを更新する
+ * @param {number} deltaTime 経過時間（ミリ秒）
+ */
+function updateColorTransition(deltaTime) {
+    const transitionSpeed = 0.002; // 1秒で完全に遷移する場合は0.001
+    if (currentDangerState) {
+        colorTransitionProgress = Math.min(colorTransitionProgress + transitionSpeed * deltaTime, 1);
+    } else {
+        colorTransitionProgress = Math.max(colorTransitionProgress - transitionSpeed * deltaTime, 0);
+    }
+}
+
+/**
+ * 現在の色遷移の進行度に基づいて色を取得する
+ * @returns {string} 現在の色
+ */
+function getCurrentColor() {
+    const startColor = '#FFFFFF';
+    const endColor = '#FF0000';
+    return interpolateColor(startColor, endColor, colorTransitionProgress);
+}
+
+/**
+ * 背景の透過度を滑らかに調整する
+ * @param {number} deltaTime - 前回の更新からの経過時間（ミリ秒）
+ */
+function updateBackgroundOpacity(deltaTime) {
+    if (currentBackgroundOpacity < targetBackgroundOpacity) {
+        currentBackgroundOpacity = Math.min(currentBackgroundOpacity + OPACITY_CHANGE_RATE * deltaTime, targetBackgroundOpacity);
+    } else if (currentBackgroundOpacity > targetBackgroundOpacity) {
+        currentBackgroundOpacity = Math.max(currentBackgroundOpacity - OPACITY_CHANGE_RATE * deltaTime, targetBackgroundOpacity);
+    }
+    const body = document.body;
+    const backgroundImage = window.getComputedStyle(body).backgroundImage;
+    const newBackgroundImage = backgroundImage.replace(
+        /rgba\(0,\s*0,\s*0,\s*[\d.]+\)/,
+        `rgba(0, 0, 0, ${currentBackgroundOpacity})`
+    );
+    body.style.backgroundImage = newBackgroundImage;
+}
+
+/**
+ * 背景の目標透過度を設定する
+ * @param {boolean} isDanger - 危険状態かどうか
+ */
+function setTargetBackgroundOpacity(isDanger) {
+    targetBackgroundOpacity = isDanger ? 0.9 : 0.6;
 }
 
 //メインループと初期化
@@ -699,6 +847,8 @@ function initGame() {
     backToBack = false;
     backToBackCount = 0;
     nextPieces = [];
+    holdPiece = null;
+    colorTransitionProgress = 0;
 
     // ボードの初期化
     board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
@@ -710,8 +860,13 @@ function initGame() {
     isGameInitialized = true;
     isGameStarted = false;
 
+    setTargetBackgroundOpacity(false);
+    updateBackgroundOpacity(100000);
+
     // 盤面の初期描画
     draw();
+
+    console.log("GameInitialized");
 }
 
 /**
@@ -721,7 +876,7 @@ function startGame() {
     // ピース関連の初期化
     bag = [];
     currentPiece = getNextPiece();
-    nextPieces = [getNextPiece(), getNextPiece(), getNextPiece()];
+    nextPieces = [getNextPiece(), getNextPiece(), getNextPiece(), getNextPiece()];
     holdPiece = null;
     canHold = true;
 
@@ -796,6 +951,14 @@ function update(time = 0) {
     const deltaTime = time - gameState.lastTime;
     gameState.lastTime = time;
 
+    gameState.elapsedTime += deltaTime;
+    if(gameState.elapsedTime <= 1000/FPS){
+        requestAnimationFrame(update);
+        return;
+    }else{
+        gameState.elapsedTime = 0;
+    }
+
     if(isIntervalActive){
         intervalTimer -= deltaTime;
         if(intervalTimer <= 0){
@@ -812,6 +975,12 @@ function update(time = 0) {
                         currentPiece.y++;
                     }
                     currentPiece.y--;
+                } else if(gameState.dropInterval > 2 && gameState.dropInterval <17){
+                    let time=0;
+                    while(time < deltaTime) {
+                        time += gameState.dropInterval;
+                        moveDown();
+                    }
                 } else {
                     moveDown();
                 }
@@ -886,6 +1055,18 @@ function update(time = 0) {
             initGame();
             inputState.reload = false;
         }
+        // 危険状態のチェックと色遷移の更新
+        const isDanger = checkDangerZone();
+        const isGhostDanger = ghostPieceOverlapsDangerZone();
+        // console.log(isDanger)
+        if (isDanger !== currentDangerState) {
+            currentDangerState = isDanger;
+        }
+        updateColorTransition(deltaTime);
+
+        // 背景の透過度を調整
+        setTargetBackgroundOpacity(isGhostDanger);
+        updateBackgroundOpacity(deltaTime);
 
         updateLevel();
         draw();
