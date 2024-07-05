@@ -76,6 +76,12 @@
             '#00ffff', '#ffff00', '#800080', '#ffa500', '#0000ff', '#00ff00', '#ff0000'
         ];
 
+        // 移動関連の定数
+        const MOVEMENT = {
+            DAS: 200,    // Delayed Auto Shift（最初の移動までの遅延時間）
+            ARR: 25      // Auto Repeat Rate（連続移動の間隔）
+        };
+
         // レベルごとの落下速度 ms
         const LEVEL_SPEEDS = [
             800, 650, 500, 370, 250, 150, 100, 80, 60, 40,  // レベル1-10
@@ -117,6 +123,26 @@
                 [[0, 0], [-1, 0], [ 2,-0], [-1,  2], [ 2, -1]],//0 > L
             ],
             O: [[[0, 0]], [[0, 0]], [[0, 0]], [[0, 0]]]
+        };
+
+        // スコア関連のグローバル変数
+        const SCORE = {
+            BASE: [0, 100, 300, 500, 800],
+            TSPIN_MINI: [100, 200, 400],
+            TSPIN: [400, 800, 1200, 1600],
+            PERFECT_CLEAR: [0, 900, 1500, 2300, 2800],
+            B2B: {
+                TETRIS: 1200,
+                TSPIN_MINI: [100, 300, 600],
+                TSPIN: [400, 1200, 1800, 2400],
+                PERFECT_CLEAR_TETRIS: 4400
+            },
+            REN: {
+                MULTIPLIER: 50,
+                MAX: 1000,
+                B2B_MULTIPLIER: 75,
+                B2B_MAX: 1500
+            }
         };
 
         // テストモード用のボード
@@ -535,11 +561,11 @@
         function calculateRenBonus(ren) {
             // RENが1の時はボーナスなし、2から開始
             if (ren <= 1) return 0;
-            let score = Math.min(ren * 50, 1000);// 2RENから50点ずつ増加 上限1000
-            if(backToBack && backToBackCount > 0){
-                score = Math.min(ren * 75, 1500);// B2BRENは75点ずつ、上限1500、あり得ないけど
+            if (backToBack && backToBackCount > 0) {
+                return Math.min(ren * SCORE.REN.B2B_MULTIPLIER, SCORE.REN.B2B_MAX);
+            } else {
+                return Math.min(ren * SCORE.REN.MULTIPLIER, SCORE.REN.MAX);
             }
-            return score;
         }
 
         /**
@@ -552,98 +578,29 @@
         * @returns {number} 計算されたスコア
         */
         function calculateScore(lines, isPerfectClear, isTetris, isTSpin, isTSpinMini) {
-            const basePoints = [0, 100, 300, 500, 800]; // 0, 1, 2, 3, 4列消しの基本点
-            let score = basePoints[lines];
-            if(isTestMode)console.log(`line: ${lines} isPerfectCler: ${isPerfectClear} isTetris: ${isTetris} isTspin: ${isTSpin}, isTspinMini: ${isTSpinMini}`);
+            let score = SCORE.BASE[lines];
 
-            //Tスピンミニ
-            if(isTSpinMini){
-                switch(lines){
-                    case 0:
-                        score = 100;
-                        break;
-                    case 1:
-                        score = 200;
-                        break;
-                    case 2:
-                        score = 400;
-                        break;
-                }
+            if (isTSpinMini) {
+                score = SCORE.TSPIN_MINI[lines] || score;
+            } else if (isTSpin) {
+                score = SCORE.TSPIN[lines] || score;
             }
 
-            //Tスピン
-            if(isTSpin && !isTSpinMini){
-                switch(lines){
-                    case 0:
-                        score = 400;
-                        break;
-                    case 1:
-                        score = 800;
-                        break;
-                    case 2:
-                        score = 1200;
-                        break;
-                    case 3:
-                        score = 1600;
-                }
-            }
-
-            // パーフェクトクリアボーナス
             if (isPerfectClear) {
-                switch(lines){
-                    case 0:
-                        score = 0;
-                        break;
-                    case 1:
-                        score = 900;
-                        break;
-                    case 2:
-                        score = 1500;
-                        break;
-                    case 3:
-                        score = 2300;
-                        break;
-                    case 4:
-                        score = 2800;
-                        break;
-                }
+                score = SCORE.PERFECT_CLEAR[lines] || score;
             }
 
-            // B2Bボーナス
             if (backToBack && backToBackCount > 0) {
-                if(isTetris){
-                    score = 1200;
+                if (isTetris) {
+                    score = SCORE.B2B.TETRIS;
+                } else if (isTSpinMini) {
+                    score = SCORE.B2B.TSPIN_MINI[lines] || score;
+                } else if (isTSpin) {
+                    score = SCORE.B2B.TSPIN[lines] || score;
                 }
-                if(isTSpinMini){
-                    switch(lines){
-                        case 0:
-                            score = 100;
-                            break;
-                        case 1:
-                            score = 300;
-                            break;
-                        case 2:
-                            score = 600;
-                            break;
-                    }
-                }
-                if(isTSpin){
-                    switch(lines){
-                        case 0:
-                            score = 400;
-                            break;
-                        case 1:
-                            score = 1200;
-                            break;
-                        case 2:
-                            score = 1800;
-                            break;
-                        case 3:
-                            score = 2400;
-                    }
-                }
-                if(isPerfectClear && lines === 4){
-                    score = 4400;
+
+                if (isPerfectClear && lines === 4) {
+                    score = SCORE.B2B.PERFECT_CLEAR_TETRIS;
                 }
             }
 
@@ -961,16 +918,22 @@
                 // 左右移動の処理
                 ['left', 'right'].forEach(direction => {
                     if (inputState[direction].pressed) {
-                        inputState[direction].duration += deltaTime;
-                        if (inputState[direction].duration > 200) { // 0.2秒以上押し続けている場合
-                            const moveInterval = 1000 / 40; // 秒間20マスの速度
-                            const movesToMake = Math.floor(inputState[direction].duration / moveInterval) - Math.floor((inputState[direction].duration - deltaTime) / moveInterval);
-                            for (let i = 0; i < movesToMake; i++) {
-                                move(direction === 'left' ? -1 : 1, 0);
-                            }
-                        } else if (inputState[direction].duration <= deltaTime) { // 最初の押下時
+                        if (inputState[direction].duration === 0) {
+                            // 最初の押下時
                             move(direction === 'left' ? -1 : 1, 0);
                         }
+                        
+                        inputState[direction].duration += deltaTime;
+                        
+                        if (inputState[direction].duration >= MOVEMENT.DAS) {
+                            const movesSinceDAS = Math.floor((inputState[direction].duration - MOVEMENT.DAS) / MOVEMENT.ARR);
+                            if (movesSinceDAS > 0) {
+                                move(direction === 'left' ? -1 : 1, 0);
+                                inputState[direction].duration = MOVEMENT.DAS + (movesSinceDAS * MOVEMENT.ARR);
+                            }
+                        }
+                    } else {
+                        inputState[direction].duration = 0;
                     }
                 });
 
