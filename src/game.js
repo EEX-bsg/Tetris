@@ -86,15 +86,15 @@ O: [[[0, 0]], [[0, 0]], [[0, 0]], [[0, 0]]]
 
 // スコア関連のグローバル変数
 const SCORE = {
-BASE: [0, 100, 300, 500, 800],
-TSPIN_MINI: [100, 200, 400],
-TSPIN: [400, 800, 1200, 1600],
-PERFECT_CLEAR: [0, 900, 1500, 2300, 2800],
+BASE:          [  0, 100,  300,  500,  800],
+TSPIN_MINI:    [100, 200,  400, 1600],
+TSPIN:         [  0, 800, 1200, 1600],
+PERFECT_CLEAR: [  0, 900, 1500, 2300, 2800],
 B2B: {
 TETRIS: 1200,
-TSPIN_MINI: [100, 300, 600],
-TSPIN: [400, 1200, 1800, 2400],
-PERFECT_CLEAR_TETRIS: 4400
+PERFECT_CLEAR_TETRIS: 4400,
+TSPIN_MINI:    [100,  300,  600, 2400],
+TSPIN:         [  0, 1200, 1800, 2400],
 },
 REN: {
 MULTIPLIER: 50,
@@ -204,6 +204,15 @@ function moveDown() {
 }
 
 /**
+ * ライン消去のないT-スピンミニのスコアを処理する
+ */
+function processNoLineClearTSpinMini() {
+    const scoreGain = calculateScore(0, false, false, false, true);
+    score += scoreGain;
+    updateScoreDisplay();
+}
+
+/**
  * テトリミノをロック（固定）する
  * @param {boolean} isHardDrop - ハードドロップかどうか trueでハードドロップ
  */
@@ -227,7 +236,11 @@ function lockPiece(isHardDrop = false) {
     const tSpin = isTSpin(currentPiece, board);
     const tSpinMini = isTSpinMini(currentPiece, board, currentPiece.lastKick);
 
-    removeLines(tSpin, tSpinMini);
+    const linesCleared = removeLines(tSpin, tSpinMini);
+    if(linesCleared===0 && tSpinMini){
+        processNoLineClearTSpinMini()
+    }
+
     isIntervalActive = true;
     intervalTimer = calculateIntervalTime();
     resetPiece();
@@ -420,6 +433,7 @@ function calculateScore(lines, isPerfectClear, isTetris, isTSpin, isTSpinMini) {
  * ラインを削除する
  * @param {boolean} isTSpin - Tスピンかどうか
  * @param {boolean} isTSpinMini - Tスピンミニかどうか
+ * @returns {number} 消したライン数
  */
 function removeLines(isTSpin, isTSpinMini) {
     let lines = 0;
@@ -455,6 +469,7 @@ function removeLines(isTSpin, isTSpinMini) {
 
     updateLevel();
     updateScoreDisplay();
+    return lines;
 }
 
 /**
