@@ -25,7 +25,7 @@
     </style>
 </head>
 <body>
-<div id="gameContainer">
+<div id="gameContainer">c
         <div id="holdContainer">
             <div>HOLD：</div>
             <canvas id="holdPiece" width="120" height="120"></canvas>
@@ -67,8 +67,8 @@
             [[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]]],  // I
             [[[1,1],[1,1]]],                              // O
             [[[0,1,0],[1,1,1],[0,0,0]]],                  // T
-            [[[1,0,0],[1,1,1],[0,0,0]]],                  // L
-            [[[0,0,1],[1,1,1],[0,0,0]]],                  // J
+            [[[0,0,1],[1,1,1],[0,0,0]]],                  // L
+            [[[1,0,0],[1,1,1],[0,0,0]]],                  // J
             [[[0,1,1],[1,1,0],[0,0,0]]],                  // S
             [[[1,1,0],[0,1,1],[0,0,0]]]                   // Z
         ];
@@ -848,25 +848,37 @@
          * ゲームの初期化
          */
         function initGame() {
+            // ゲーム状態の初期化
+            isGameOver = false;
+            score = 0;
+            level = 1;
+            totalLinesCleared = 0;
+
+            // REN関連の初期化
+            currentRen = 0;
+            internalRenCount = 0;
+
+            // Back-to-Back関連の初期化
+            backToBack = false;
+            backToBackCount = 0;
+
+            // ボードの初期化
+            board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+
+            // ピース関連の初期化
             bag = [];
             currentPiece = getNextPiece();
             nextPieces = [getNextPiece(), getNextPiece(), getNextPiece()];
-            isGameOver = false;
-            currentRen = 0;
-            internalRenCount = 0;
-            score = 0;
-            level = 1;
-            scoreElement.textContent = score;
-            board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
-            gameState.dropInterval = LEVEL_SPEEDS[0];
-            document.getElementById('level').textContent = level;
-            lastClearWasTeris = false;
-            updateScoreDisplay();
-            totalLinesCleared=0;
-            canHold = true;
             holdPiece = null;
-            backToBack = false;
-            backToBackCount = 0;
+            canHold = true;
+
+            // ゲームスピードの初期化
+            gameState.dropInterval = LEVEL_SPEEDS[0];
+
+            // UI更新
+            scoreElement.textContent = score;
+            document.getElementById('level').textContent = level;
+            updateScoreDisplay();
         }
 
         /**
