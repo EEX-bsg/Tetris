@@ -61,11 +61,11 @@ function drawSrsStep(step) {
 
     // 現在のピースを描画
     ctx.globalAlpha = 0.5;
-    drawPiece(ctx, step, step.x+1, step.y+1);
+    drawPiece(ctx, step, step.x, step.y+1);
     ctx.globalAlpha = 1;
 
     // キック情報を描画
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = 'white';
     ctx.font = '16px Arial';
     ctx.fillText(`Kick: (${step.kickX}, ${step.kickY})`, 10, 30);
     ctx.fillText(`Success: ${step.success}`, 10, 50);
@@ -73,7 +73,7 @@ function drawSrsStep(step) {
     // 元の位置を点線で描画
     ctx.strokeStyle = 'red';
     ctx.setLineDash([5, 5]);
-    ctx.strokeRect((srsSteps[0].x + 1) * BLOCK_SIZE, (srsSteps[0].y + 1) * BLOCK_SIZE, 
+    ctx.strokeRect((srsSteps[0].x) * BLOCK_SIZE, (srsSteps[0].y + 1) * BLOCK_SIZE, 
                 srsSteps[0].shape[0].length * BLOCK_SIZE, srsSteps[0].shape.length * BLOCK_SIZE);
     ctx.setLineDash([]);
 }

@@ -1,17 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Orbitron:wght@700&display=swap');
+
 body {
+    font-family: 'Roboto', sans-serif;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     height: 100vh;
     margin: 0;
-    background-color: #f0f0f0;
+    padding-top: 60px;
+    color: #ffffff;
+    box-sizing: border-box;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('https://images.unsplash.com/photo-1484715444575-8f126523872f?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
+
 #gameContainer {
     display: flex;
+    background: transparent;
+    border-radius: 0;
 }
-#gameBoard {
-    margin: 0 20px;
-}
+
 #holdContainer, #nextContainer {
     width: 120px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 3px solid white;
+    margin-top: 90px;
+}
+
+#rightContainer{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 150px;
+    height: 695px;
+}
+
+#nextContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.header {
+    background: rgb(255, 255, 255);
+    width: 100%;
+    padding: 5px 0;
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    margin: 0;
+    text-align: center;
+    color: black;
+}
+
+#statsContainer {
+    padding: 0 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#statsContainer div {
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 300;
+    display: flex;
+    justify-content: space-between;
+}
+
+span {
+    font-weight: 400;
+    color: #ffffff;
+}
+
+#score, #level, #linesCleared, #renCount {
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+#particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.particle {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(2px);
+}
+
+@keyframes screenShakeHard {
+    0% { transform: translateY(0); }
+    25% { transform: translateY(3px); }
+    75% { transform: translateY(3px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes screenShakeSoft {
+    0% { transform: translateY(0); }
+    25% { transform: translateY(2px); }
+    75% { transform: translateY(2px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes screenShakeLeft {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-1px); }
+    75% { transform: translateX(-1x); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes screenShakeRight {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(1px); }
+    75% { transform: translateX(1px); }
+    100% { transform: translateX(0); }
+}
+
+.shake-hard {
+    animation: screenShakeHard 0.10s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.shake-soft {
+    animation: screenShakeSoft 0.20s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.shake-left {
+    animation: screenShakeLeft 0.10s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.shake-right {
+    animation: screenShakeRight 0.10s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }

@@ -16,7 +16,7 @@ const holdCtx = holdCanvas.getContext('2d');
 const scoreElement = document.getElementById('score');
 
 // キャンバスサイズ設定
-canvas.width = (COLS + 2) * BLOCK_SIZE;
+canvas.width = COLS * BLOCK_SIZE + 6;
 canvas.height = (ROWS + 1) * BLOCK_SIZE + 2;
 
 // テトリミノの形状と色
@@ -31,7 +31,7 @@ const SHAPES = [
 [[[1,1,0],[0,1,1],[0,0,0]]]                   // Z
 ];
 const COLORS = [
-'#00ffff', '#ffff00', '#800080', '#ffa500', '#0000ff', '#00ff00', '#ff0000'
+'#00ffff', '#ffff00', '#ff00ff', '#ffa500', '#0000ff', '#00ff00', '#ff0000'
 ];
 
 // 移動関連の定数
@@ -148,6 +148,7 @@ let backToBack = false;
 let backToBackCount = 0;
 let isIntervalActive = false;
 let intervalTimer = 0;
+let isGameStarted = false;
 
 // ゲーム状態
 let gameState = {
@@ -193,9 +194,43 @@ function moveDown() {
 }
 
 /**
- * テトリミノをロック（固定）する
+ * 画面を揺らすアニメーションを適用する
+ * @param {string} type - 揺れのタイプ ('hard', 'soft', 'left', 'right')
  */
-function lockPiece() {
+function shakeScreen(type) {
+    const gameContainer = document.getElementById('gameContainer');
+    let className;
+    
+    switch(type) {
+        case 'hard':
+            className = 'shake-hard';
+            break;
+        case 'soft':
+            className = 'shake-soft';
+            break;
+        case 'left':
+            className = 'shake-left';
+            break;
+        case 'right':
+            className = 'shake-right';
+            break;
+        default:
+            return;
+    }
+    
+    gameContainer.classList.add(className);
+    
+    // アニメーション終了後にクラスを削除
+    setTimeout(() => {
+        gameContainer.classList.remove(className);
+    }, 150);  // アニメーションの持続時間と同じ
+}
+
+/**
+ * テトリミノをロック（固定）する
+ * @param {boolean} isHardDrop - ハードドロップかどうか trueでハードドロップ
+ */
+function lockPiece(isHardDrop = false) {
     currentPiece.shape[0].forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
@@ -218,6 +253,9 @@ function lockPiece() {
         isIntervalActive = true;
         intervalTimer = calculateIntervalTime();
         resetPiece();
+        
+        // 画面を揺らす
+        shakeScreen(isHardDrop ? 'hard' : 'soft');
     }
 }
 
@@ -454,6 +492,10 @@ function move(dx, dy) {
     if (collision(currentPiece)) {
         currentPiece.x -= dx;
         currentPiece.y -= dy;
+        if (dx !== 0) {
+            // 左右の壁に当たった場合
+            shakeScreen(dx > 0 ? 'right' : 'left');
+        }
         return false;
     }
     if (dy === 0) {
@@ -461,7 +503,6 @@ function move(dx, dy) {
     }
     lockTimer = 0;
     currentPiece.lastMoveWasRotation = false;
-    // console.log(currentPiece.x, currentPiece.y)
     return true;
 }
 
@@ -548,6 +589,21 @@ function wallKick(piece, direction) {
     }
     return null;
 }
+/**
+ * テトリミノの回転や位置情報をリセットする
+ * @param {Object} piece - リセットするミノ
+ * @returns {Object} リセットしたミノ
+ */
+function resetPieceState(piece) {
+    return {
+        shape: SHAPES[SHAPE_TYPES.indexOf(piece.type)],
+        color: piece.color,
+        type: piece.type,
+        x: 0,
+        y: 0,
+        rotation: 0
+    };
+}
 
 /**
  * テトリミノを保持
@@ -556,11 +612,13 @@ function hold() {
     if (!canHold) return;
 
     if (holdPiece) {
-        [currentPiece, holdPiece] = [holdPiece, currentPiece];
+        const tempPiece = JSON.parse(JSON.stringify(holdPiece));
+        holdPiece = resetPieceState(currentPiece);
+        currentPiece = resetPieceState(tempPiece);
         currentPiece.x = Math.floor(COLS / 2) - Math.ceil(currentPiece.shape[0].length / 2);
         currentPiece.y = 0;
     } else {
-        holdPiece = currentPiece;
+        holdPiece = resetPieceState(currentPiece);
         resetPiece();
     }
     canHold = false;
@@ -570,11 +628,25 @@ function hold() {
  * ハードドロップ(即時落下固定)
  */
 function hardDrop() {
+    const startY = currentPiece.y;
     while (!collision(currentPiece)) {
         currentPiece.y++;
     }
     currentPiece.y--;
-    lockPiece();
+    const endY = currentPiece.y;
+    const piece = JSON.parse(JSON.stringify(currentPiece));
+    hardDropEffect = function(){
+        drawHardDropTrail(piece, startY, endY);
+        // drawLandingEffect(piece);
+        if(hardDropEffectLifeTime <= 0){
+            hardDropEffect = null;
+            hardDropEffectLifeTime=HARD_DROP_EFFECT_LIFETIME;
+        }else{
+            hardDropEffectLifeTime--;
+        }
+    }
+
+    lockPiece(true);  // ハードドロップであることを示す
     lockTimer = 0;
     moveCounter = 0;
 }
@@ -624,6 +696,7 @@ function changeLevel(level){
 function initGame() {
     // ゲーム状態の初期化
     isGameOver = false;
+    isGameStarted = false;
     score = 0;
     level = 1;
     totalLinesCleared = 0;
