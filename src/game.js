@@ -238,7 +238,7 @@ function lockPiece(isHardDrop = false) {
 
     const linesCleared = removeLines(tSpin, tSpinMini);
     if(linesCleared===0 && tSpinMini){
-        processNoLineClearTSpinMini()
+        // processNoLineClearTSpinMini()
     }
 
     isIntervalActive = true;
